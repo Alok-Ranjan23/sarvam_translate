@@ -2,7 +2,8 @@
 llama-cpp-python
 
 # IndicTrans2 (HuggingFace transformers)
-transformers==4.44.2
+transformers==4.53.2
+safetensors
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 sentencepiece

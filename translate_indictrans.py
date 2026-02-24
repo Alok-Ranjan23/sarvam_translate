@@ -12,7 +12,8 @@ import time
 from typing import List, Optional
 
 import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForSeq2SeqLM, AutoTokenizer
+from safetensors.torch import load_file as load_safetensors
 
 try:
     from IndicTransToolkit.processor import IndicProcessor
@@ -81,6 +82,22 @@ class IndicTransTranslator:
         self._indic_en_model = None
         self._indic_en_tokenizer = None
 
+    @staticmethod
+    def _load_model_safe(ckpt: str):
+        """Load model bypassing accelerate's meta-tensor dispatch."""
+        config = AutoConfig.from_pretrained(ckpt, trust_remote_code=True)
+        model = AutoModelForSeq2SeqLM.from_config(config, trust_remote_code=True)
+        safetensors_path = os.path.join(ckpt, "model.safetensors")
+        if os.path.exists(safetensors_path):
+            state_dict = load_safetensors(safetensors_path, device="cpu")
+        else:
+            state_dict = torch.load(
+                os.path.join(ckpt, "pytorch_model.bin"), map_location="cpu"
+            )
+        model.load_state_dict(state_dict, strict=False)
+        model.tie_weights()
+        return model.eval()
+
     def _load_en_indic(self):
         if self._en_indic_model is not None:
             return
@@ -89,10 +106,7 @@ class IndicTransTranslator:
         self._en_indic_tokenizer = AutoTokenizer.from_pretrained(
             ckpt, trust_remote_code=True
         )
-        self._en_indic_model = AutoModelForSeq2SeqLM.from_pretrained(
-            ckpt, trust_remote_code=True, low_cpu_mem_usage=True
-        ).to(self.device)
-        self._en_indic_model.eval()
+        self._en_indic_model = self._load_model_safe(ckpt)
 
     def _load_indic_en(self):
         if self._indic_en_model is not None:
@@ -102,10 +116,7 @@ class IndicTransTranslator:
         self._indic_en_tokenizer = AutoTokenizer.from_pretrained(
             ckpt, trust_remote_code=True
         )
-        self._indic_en_model = AutoModelForSeq2SeqLM.from_pretrained(
-            ckpt, trust_remote_code=True, low_cpu_mem_usage=True
-        ).to(self.device)
-        self._indic_en_model.eval()
+        self._indic_en_model = self._load_model_safe(ckpt)
 
     def _ckpt_path(self, repo_id: str) -> str:
         """Return a local path if models were pre-downloaded, else the HF repo id."""

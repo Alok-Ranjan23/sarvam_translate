@@ -43,15 +43,22 @@ LANGUAGE_NAMES = {
 }
 
 
+GGUF_PREFERENCE = ["IQ4_XS", "Q4_K_M", "Q5_K_M", "Q8_0"]
+
+
 def _find_gguf(models_dir: str) -> str:
-    """Locate the first .gguf file under the sarvam subdirectory."""
+    """Locate the best .gguf file under the sarvam subdirectory (prefer higher quality)."""
     pattern = os.path.join(models_dir, "sarvam-translate-gguf", "*.gguf")
     matches = glob.glob(pattern)
     if not matches:
         raise FileNotFoundError(
             f"No .gguf file found in {pattern}. Run download_models.py first."
         )
-    return matches[0]
+    for tag in GGUF_PREFERENCE:
+        for m in matches:
+            if tag in m:
+                return m
+    return sorted(matches)[0]
 
 
 class SarvamTranslator:
