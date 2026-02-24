@@ -25,21 +25,15 @@ A command-line proof-of-concept that runs **Sarvam-Translate** (4B LLM, GGUF qua
 
 ## Setup
 
-### 1. Create a virtual environment
+### 1. Create a virtual environment and install dependencies
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # Linux/macOS
-# .venv\Scripts\activate    # Windows
-```
-
-### 2. Install dependencies (CPU-only PyTorch)
-
-```bash
+python -m venv ~/sarvam_venv
+source ~/sarvam_venv/bin/activate
 pip install -r requirements.txt
 ```
 
-This installs PyTorch **CPU-only** (~200 MB) instead of the full CUDA bundle (~2 GB+), since this POC targets CPU inference.
+This creates the venv in your home directory for faster I/O and installs PyTorch **CPU-only** (~200 MB) instead of the full CUDA bundle (~2 GB+), since this POC targets CPU inference.
 
 ### 3. Install IndicTransToolkit (required for IndicTrans2)
 
@@ -54,7 +48,22 @@ pip install -e ./IndicTransToolkit
 python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 ```
 
-### 5. Download models
+### 5. Request access to IndicTrans2 (gated model)
+
+IndicTrans2 models are **gated** on HuggingFace. You must request access before downloading:
+
+1. Visit https://huggingface.co/ai4bharat/indictrans2-en-indic-dist-200M and click **"Agree and access repository"**
+2. Visit https://huggingface.co/ai4bharat/indictrans2-indic-en-dist-200M and do the same
+3. Wait for approval (can be instant or take a few hours)
+4. Log in from the terminal:
+
+```bash
+python -c "from huggingface_hub import login; login()"
+```
+
+Paste your token from https://huggingface.co/settings/tokens (create a "Read" token).
+
+### 6. Download models
 
 ```bash
 # Download both models (Sarvam GGUF ~2.5 GB + IndicTrans2 ~400 MB)
