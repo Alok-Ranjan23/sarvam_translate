@@ -1,0 +1,20 @@
+# Sarvam-Translate (GGUF on CPU via llama.cpp)
+llama-cpp-python
+
+# IndicTrans2 (HuggingFace transformers)
+transformers
+torch
+sentencepiece
+sacremoses
+nltk
+regex
+pandas
+scipy
+accelerate
+
+# Model downloading
+huggingface-hub
+
+# Benchmarking / CLI
+psutil
+tabulate
