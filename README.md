@@ -33,11 +33,13 @@ source .venv/bin/activate   # Linux/macOS
 # .venv\Scripts\activate    # Windows
 ```
 
-### 2. Install dependencies
+### 2. Install dependencies (CPU-only PyTorch)
 
 ```bash
 pip install -r requirements.txt
 ```
+
+This installs PyTorch **CPU-only** (~200 MB) instead of the full CUDA bundle (~2 GB+), since this POC targets CPU inference.
 
 ### 3. Install IndicTransToolkit (required for IndicTrans2)
 

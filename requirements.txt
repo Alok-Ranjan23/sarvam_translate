@@ -3,6 +3,7 @@ llama-cpp-python
 
 # IndicTrans2 (HuggingFace transformers)
 transformers
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 sentencepiece
 sacremoses
