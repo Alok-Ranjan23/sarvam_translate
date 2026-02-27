@@ -18,6 +18,12 @@ accelerate
 # Model downloading
 huggingface-hub
 
+# FLORES-200 benchmark
+datasets
+sacrebleu
+setuptools<82
+unbabel-comet
+
 # Benchmarking / CLI
 psutil
 tabulate

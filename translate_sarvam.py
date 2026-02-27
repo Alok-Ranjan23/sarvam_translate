@@ -43,7 +43,7 @@ LANGUAGE_NAMES = {
 }
 
 
-GGUF_PREFERENCE = ["IQ4_XS", "Q4_K_M", "Q5_K_M", "Q8_0"]
+GGUF_PREFERENCE = ["Q4_K_M", "Q5_K_M", "Q8_0", "IQ4_XS"]
 
 
 def _find_gguf(models_dir: str) -> str:
@@ -82,45 +82,64 @@ class SarvamTranslator:
             verbose=False,
         )
 
+    def _call_llm(self, target_lang: str, text: str,
+                  temperature: float = 0.01, max_tokens: int = 1024) -> dict:
+        """Single translation call: text -> target_lang."""
+        tgt_name = LANGUAGE_NAMES.get(target_lang, target_lang)
+        messages = [
+            {"role": "system", "content": f"Translate the text below to {tgt_name}."},
+            {"role": "user", "content": text},
+        ]
+        t0 = time.perf_counter()
+        response = self.llm.create_chat_completion(
+            messages=messages, temperature=temperature, max_tokens=max_tokens,
+        )
+        elapsed = time.perf_counter() - t0
+        choice = response["choices"][0]["message"]["content"]
+        usage = response.get("usage", {})
+        return {
+            "translation": choice.strip(),
+            "time_seconds": elapsed,
+            "tokens": usage.get("completion_tokens", len(choice.split())),
+        }
+
     def translate(
         self,
         text: str,
         target_lang: str = "hi",
+        source_lang: str | None = None,
         temperature: float = 0.01,
         max_tokens: int = 1024,
     ) -> dict:
         """
         Translate *text* into *target_lang*.
 
-        Returns a dict with keys:
-            translation  - the translated string
-            time_seconds - wall-clock time for generation
-            tokens       - number of completion tokens generated
+        GGUF quantized models cannot do direct Indic->Indic (they output
+        English instead).  When both source and target are non-English we
+        pivot automatically:  source -> en -> target.
+
+        Returns dict with: translation, time_seconds, tokens, pivoted.
         """
-        lang_name = LANGUAGE_NAMES.get(target_lang, target_lang)
-
-        messages = [
-            {"role": "system", "content": f"Translate the text below to {lang_name}."},
-            {"role": "user", "content": text},
-        ]
-
-        t0 = time.perf_counter()
-        response = self.llm.create_chat_completion(
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
+        needs_pivot = (
+            source_lang is not None
+            and source_lang != "en"
+            and target_lang != "en"
         )
-        elapsed = time.perf_counter() - t0
 
-        choice = response["choices"][0]["message"]["content"]
-        usage = response.get("usage", {})
-        completion_tokens = usage.get("completion_tokens", len(choice.split()))
+        if needs_pivot:
+            step1 = self._call_llm("en", text, temperature, max_tokens)
+            step2 = self._call_llm(target_lang, step1["translation"],
+                                   temperature, max_tokens)
+            return {
+                "translation": step2["translation"],
+                "time_seconds": step1["time_seconds"] + step2["time_seconds"],
+                "tokens": step1["tokens"] + step2["tokens"],
+                "pivoted": True,
+            }
 
-        return {
-            "translation": choice.strip(),
-            "time_seconds": elapsed,
-            "tokens": completion_tokens,
-        }
+        result = self._call_llm(target_lang, text, temperature, max_tokens)
+        result["pivoted"] = False
+        return result
 
 
 if __name__ == "__main__":
